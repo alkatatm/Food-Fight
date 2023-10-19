@@ -3,7 +3,6 @@ import axios from '../../api/axios';
 
 function ImageView({ imageId }) {
   const [image, setImage] = useState(null);
-  const [comment, setComment] = useState('');
   const [rating, setRating] = useState(0);
   const [notification, setNotification] = useState('');
 
@@ -21,18 +20,6 @@ function ImageView({ imageId }) {
       });
   };
 
-  const handleCommentSubmit = () => {
-    axios.post(`/dashboard/${imageId}/comments`, { content: comment })
-      .then(() => {
-        setComment('');
-        fetchImageDetails();
-        setNotification('Comment added successfully!');
-      })
-      .catch((error) => {
-        console.error("Error submitting comment:", error.message);
-      });
-  };
-
   const handleRatingSubmit = () => {
     axios.post(`/dashboard/${imageId}/ratings`, { rating: Number(rating) })
       .then(() => {
@@ -46,7 +33,7 @@ function ImageView({ imageId }) {
   };
 
   if (!image) {
-    return <div>Loading...</div>; // Consider replacing this with a spinner or loading animation for better UX
+    return <div>Loading...</div>; 
   }
 
   return (
@@ -54,21 +41,6 @@ function ImageView({ imageId }) {
       {notification && <div className="notification">{notification}</div>}
       <h2>{image.title}</h2>
       <img src={image.imageUrl} alt={image.title} />
-      <div>
-        <h3>Comments</h3>
-        <ul>
-          {image.comments.map((comment) => (
-            <li key={comment.id}>{comment.content}</li>
-          ))}
-        </ul>
-        <textarea
-          placeholder="Add a comment..."
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          aria-label="Add a comment"
-        />
-        <button onClick={handleCommentSubmit} aria-label="Submit comment">Submit Comment</button>
-      </div>
       <div>
         <h3>Rating</h3>
         <p>Average Rating: {image.averageRating.toFixed(2)}</p>

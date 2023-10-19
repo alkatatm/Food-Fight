@@ -73,7 +73,7 @@ app.post('/login', (req, res) => {
 app.get('/dashboard', (req, res) => {
     console.log("Received GET request on /dashboard");
     
-    db.all('SELECT photos.*, COALESCE(AVG(ratings.rating), 0) AS average_rating FROM photos LEFT JOIN ratings ON photos.id = ratings.user_id GROUP BY photos.id ORDER BY average_rating DESC;', (err, rows) => {
+    db.all('SELECT photos.*, COALESCE(AVG(ratings.rating), 0) AS average_rating FROM photos LEFT JOIN ratings ON photos.id = ratings.photo_id GROUP BY photos.id ORDER BY average_rating DESC;', (err, rows) => {
       
       if (err) {
         // Handle any errors that occur during the database query
@@ -102,6 +102,40 @@ app.post('/dashboard/upload', upload.single('image'), (req, res) => {
             return res.status(500).json({ error: 'Photo upload failed', details: err.message });
         }
         res.status(201).json({ message: 'Photo uploaded successfully' });
+    });
+});
+
+app.post('/dashboard/rate', (req, res) => {
+    const userId = req.body.user_id;
+    const photoId = req.body.photo_id;
+    const rating = req.body.rating;
+
+    // Check if the user has already rated this photo
+    db.get('SELECT * FROM ratings WHERE user_id = ? AND photo_id = ?', [userId, photoId], (err, existingRating) => {
+        if (err) {
+            console.error("Database error occurred:", err.message);
+            return res.status(500).json({ error: 'Database error', details: err.message });
+        }
+
+        if (existingRating) {
+            // If the user has already rated this photo, update the existing rating
+            db.run('UPDATE ratings SET rating = ? WHERE user_id = ? AND photo_id = ?', [rating, userId, photoId], (err) => {
+                if (err) {
+                    console.error("Error updating rating:", err.message);
+                    return res.status(500).json({ error: 'Rating update failed', details: err.message });
+                }
+                res.json({ message: 'Rating updated successfully' });
+            });
+        } else {
+            // If the user has not rated this photo before, insert a new rating
+            db.run('INSERT INTO ratings (user_id, photo_id, rating) VALUES (?, ?, ?)', [userId, photoId, rating], (err) => {
+                if (err) {
+                    console.error("Error inserting rating:", err.message);
+                    return res.status(500).json({ error: 'Rating failed', details: err.message });
+                }
+                res.json({ message: 'Rating posted successfully' });
+            });
+        }
     });
 });
 

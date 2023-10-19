@@ -9,35 +9,29 @@ function Dashboard() {
   const [uploadedImage, setUploadedImage] = useState(null);
   const [description, setDescription] = useState('');
   const [userId, setUserId] = useState('');
+  const [userRating, setUserRating] = useState(0); // User's rating for the selected image
 
   useEffect(() => {
-    // Fetch the images and also get the user_id here if possible
-    async function fetchData() {
-        try {
-            const response = await axios.get('/dashboard');
-            console.log(response.data); 
-            setImages(Array.isArray(response.data) ? response.data : []);
-
-            // You might want to set user ID here if you're fetching it along with the images
-            // setUserId(response.data.userId); 
-        } catch (error) {
-            console.error("Error fetching data:", error);
-            setImages([]);
-        }
-    }
-
     fetchData();
   }, []);
 
+  const fetchData = async () => {
+    try {
+      const response = await axios.get('/dashboard');
+      setImages(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      setImages([]);
+    }
+  };
+
+  
   const getImageUrl = (path) => {
-    const fullPath = `http://localhost:3001/${path.replace('\\', '/')}`;
-    console.log("Image URL: ", fullPath);
-    return fullPath;
-};
+    return `http://localhost:3001/${path.replace('\\', '/')}`;
+  };
 
   const handleImageChange = (event) => {
-    const file = event.target.files[0];
-    setUploadedImage(file);
+    setUploadedImage(event.target.files[0]);
   };
 
   const handleSubmit = async () => {
@@ -47,8 +41,9 @@ function Dashboard() {
     formData.append('description', description);
 
     try {
-      await axios.post('/dashboard/upload', formData); // Adjust the endpoint URL as needed
-      toggleUploadModal(); // Close modal after successful upload
+      await axios.post('/dashboard/upload', formData);
+      toggleUploadModal();
+      fetchData();
     } catch (error) {
       console.error("Error uploading image:", error);
     }
@@ -62,29 +57,48 @@ function Dashboard() {
     setUploadModalVisible(!isUploadModalVisible);
   };
 
+  const handleRating = async (rating) => {
+    console.log("Rated:", rating); // For now, it just logs the rating. You can update this function as needed.
+    try {
+      await axios.post('/dashboard/rate', {
+        imageId: selectedImage.id,
+        userId: userId,
+        rating: rating,
+      });
+      setUserRating(rating);
+      // You may also want to update the average rating for this image in the UI.
+    } catch (error) {
+      console.error("Error rating image:", error);
+    }
+};
+
+const SelectedImageModal = () => {
+    return (
+        <div className="dashboard-modal">
+            <div className="dashboard-modal-content">
+                <span className="dashboard-close-button" onClick={() => setSelectedImage(null)}>X</span>
+                <h2>Selected Photo</h2>
+                <img src={getImageUrl(selectedImage.image_path)} alt={selectedImage.description} />
+                <p>{selectedImage.description}</p>
+                <div className="rate-section">
+                    <span className="rate-text">Rate:</span>
+                    <span className="empty-star" onClick={() => handleRating(5)}>&#9734;</span>
+                    <span className="empty-star" onClick={() => handleRating(4)}>&#9734;</span>
+                    <span className="empty-star" onClick={() => handleRating(3)}>&#9734;</span>
+                    <span className="empty-star" onClick={() => handleRating(2)}>&#9734;</span>
+                    <span className="empty-star" onClick={() => handleRating(1)}>&#9734;</span>
+                </div>
+            </div>
+        </div>
+    );
+  };
+
   return (
     <div className="Dashboard">
       <h1>Food Gallery</h1>
-      <button onClick={toggleUploadModal}>Upload A Photo</button>
-
-      {isUploadModalVisible && (
-        <div className="upload-modal">
-          <div className="modal-content">
-              <span className="close-button" onClick={toggleUploadModal}>X</span>
-              <h2>Upload Photo</h2>
-              <input type="file" accept="image/*" onChange={handleImageChange} />
-              <textarea 
-                placeholder="Add a description..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              ></textarea>
-              <button onClick={handleSubmit}>Submit</button>
-          </div>
-        </div>
-      )}
-
+      
       <div className="image-grid">
-        {Array.isArray(images) && images.map((image) => (
+        {images.map((image) => (
           <div
             key={image.id}
             className="image-thumbnail"
@@ -94,12 +108,26 @@ function Dashboard() {
           </div>
         ))}
       </div>
-
-      {selectedImage && (
-        <div>
-          {/* Add your modal or separate page code here */}
+  
+      <button className="upload-btn" onClick={toggleUploadModal}>Upload A Photo</button>
+  
+      {isUploadModalVisible && (
+        <div className="upload-modal">
+          <div className="dashboard-modal-content">
+            <span className="dashboard-close-button" onClick={toggleUploadModal}>X</span>
+            <h2>Upload Photo</h2>
+            <input type="file" accept="image/*" onChange={handleImageChange} />
+            <textarea 
+              placeholder="Add a description..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            ></textarea>
+            <button onClick={handleSubmit}>Submit</button>
+          </div>
         </div>
       )}
+  
+      {selectedImage && <SelectedImageModal />}
     </div>
   );
 }

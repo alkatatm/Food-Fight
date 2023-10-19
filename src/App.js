@@ -8,7 +8,6 @@ import Dashboard from './components/Dashboard/Dashboard';
 import { useLocation } from 'react-router-dom';
 import { useEffect } from 'react'; 
 import logo from './images/logo.png';
-
 function App() {
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -62,12 +61,14 @@ function App() {
           <button onClick={openLoginModal}>Login</button>
         </div>
 
-        <Routes>
-      <Route path="/" element={<Outlet />} />
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/register" element={<Outlet />} />
-      <Route path="/login" element={<Outlet />} />
-    </Routes>
+      <Routes>
+        <Route path="/" element={<Outlet />} />
+        <Route path="/register" element={<Outlet />} />
+        <Route path="/login" element={<Outlet />} />
+        <Route path="/dashboard" element={<Dashboard />
+  }
+/>
+      </Routes>
 
         {showRegistrationModal && (
           <div className="modal">

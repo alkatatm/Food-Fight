@@ -56,8 +56,23 @@ button:hover {
   color: #333;
 }
 
+.upload-btn {
+  margin-top: 30px;    
+  padding: 30px 60px;  
+  font-size: 24px;     
+  cursor: pointer;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  transition: background-color 0.3s ease;
+
+}
+
+
 /* Modals */
-.upload-modal, .modal {
+.dashboard-modal {
+  z-index: 9999;
   position: fixed;
   top: 0;
   left: 0;
@@ -69,24 +84,59 @@ button:hover {
   align-items: center;
 }
 
-.modal-content {
+.dashboard-modal-content img {
+  max-width: 100%;
+  max-height: 80%; /* You can adjust this depending on the space you want to leave for the image description */
+  display: block;
+  margin: 0 auto; /* Centers the image horizontally */
+}
+
+
+.dashboard-modal-content p {
+  color: #333;
+  font-size: 14px;
+  margin-top: 10px;
+  text-align: center; /* Optional, but can look nice if the text is short */
+}
+
+
+.dashboard-modal-content {
   background-color: #fff;
   padding: 20px;
   border-radius: 10px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
   position: relative;
+  width: 500px; /* Fixed width */
+  height: 650px; /* Fixed height */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow-y: auto;
 }
 
-.close, .close-button {
+.dashboard-close-button {
   position: absolute;
   top: 10px;
   right: 10px;
   font-size: 24px;
   cursor: pointer;
   color: #888;
+  background: rgba(255, 255, 255, 0.7); /* This is optional, but it makes the button stand out more on varied backgrounds */
+  border: none;
+  border-radius: 50%; /* Makes it round */
+  width: 30px; /* Matching width and height */
+  height: 30px;
+  text-align: center;
+  line-height: 30px; /* This centers the 'X' vertically */
 }
 
-.modal-header {
+.dashboard-close-button:hover {
+  color: #666; /* Darkens the 'X' on hover for a subtle effect */
+}
+
+
+.dashboard-modal-header {
   background-color: #007bff;
   color: #fff;
   padding: 10px;
@@ -95,7 +145,7 @@ button:hover {
   text-align: center;
 }
 
-.modal-body {
+.dashboard-modal-body {
   padding: 20px;
 }
 
@@ -111,6 +161,20 @@ input[type="text"], input[type="password"], input[type="email"] {
   border-radius: 4px;
 }
 
+.upload-modal {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5); /* semi-transparent background to dim the rest of the page */
+  z-index: 1000; /* make sure the modal is on top of other content */
+}
+
+
 /* Image Grid */
 .image-grid {
   display: flex;
@@ -120,9 +184,19 @@ input[type="text"], input[type="password"], input[type="email"] {
 }
 
 .image-thumbnail {
-  flex: 0 0 calc(33.33% - 16px); /* This assumes you want 3 images per row. Adjust accordingly */
-  margin-bottom: 16px;
+  flex: 0 0 calc(20% - 16px); /* Adjusted for 5 images per row */
+  width: 256px; /* Setting the width */
+  height: 256px; /* Setting the height */
   position: relative;
+  overflow: hidden; /* This will ensure any part of the image that exceeds the thumbnail size will be hidden. */
+  background-color: #000; /* Black background */
+}
+
+.image-thumbnail img {
+  width: 100%; /* This ensures the image covers the width of the thumbnail */
+  height: 100%; /* This ensures the image covers the height of the thumbnail */
+  object-fit: fill; /* This makes sure the image scales proportionally and excess parts are cropped rather than distorted or leaving empty space. */
+  transition: transform 0.3s;
 }
 
 .image-description {
@@ -139,10 +213,42 @@ input[type="text"], input[type="password"], input[type="email"] {
 
 .image-thumbnail img {
   width: 100%;
-  height: auto;
+  height: 100%;
   transition: transform 0.3s;
 }
 
 .image-thumbnail img:hover {
+  transform: scale(1.1);
+}
+
+.rating-container {
+  display: flex;
+  align-items: center;
+}
+
+.rate-section {
+  display: flex;
+  align-items: center;
+  justify-content: center; /* Added this line to center the entire content within the rate-section */
+  flex-direction: row-reverse;
+}
+
+.rate-text {
+  margin-right: 10px; /* Adjust this value if you want more or less space between "Rate:" and the stars */
+  font-size: 48px;
+  order: 1;
+}
+
+.empty-star {
+  font-size: 72px;
+  cursor: pointer;
+  transition: color 0.3s;
+  float: right; /* float the stars to the right */
+ 
+}
+
+.empty-star:hover,
+.empty-star:hover ~ .empty-star {
+  color: goldenrod;
   transform: scale(1.1);
 }
