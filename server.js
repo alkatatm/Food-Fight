@@ -1,6 +1,7 @@
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const bodyParser = require('body-parser');
+const jwt = require('jsonwebtoken'); // CF: JWT token authentication
 const app = express();
 const port = 3001;
 const db = new sqlite3.Database('database.db');
@@ -15,6 +16,26 @@ const storage = multer.diskStorage({
     }
 });
 
+// CF: JWT token verification. Added as second argument to protected routes
+// CF: Add token verification to routes to be protected
+function verifyToken(req, res, next) {
+    const token = req.headers.authorization; // CF: assumes token is in header
+    if (!token) {
+        return res.status(401).json({ error: 'Unauthorized'});
+    }
+
+    jwt.verify(token, secretKey, (err, decoded) => {
+        if (err) {
+            return res.status(403).json({ error: 'Forbidden'});
+        }
+
+        // CF: When token is invalid user data stored in request object
+        req.user = decoded;
+        next();
+    });
+}
+
+const secretKey = 'secret-key'; // CF: change to something more secret
 const upload = multer({ storage: storage });
 
 app.use('/uploads', express.static('uploads')); 
@@ -65,12 +86,14 @@ app.post('/login', (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid credentials' });
         }
 
-        // Authentication successful (not recommended)
-        res.json({ success: true });
+        // CF: Generate JWT token. Expires in 1h
+        const token = jwt.sign({ username }, secretKey, { expiresIn: '1h' });
+        res.json({ success: true, token}); // CF: Send token to client
     });
 });
 
-app.get('/dashboard', (req, res) => {
+// CF: Added token verification
+app.get('/dashboard', verifyToken, (req, res) => {
     console.log("Received GET request on /dashboard");
     
     db.all('SELECT photos.*, COALESCE(AVG(ratings.rating), 0) AS average_rating FROM photos LEFT JOIN ratings ON photos.id = ratings.photo_id GROUP BY photos.id ORDER BY average_rating DESC;', (err, rows) => {
@@ -91,7 +114,8 @@ app.get('/dashboard', (req, res) => {
     });
 });
 
-app.post('/dashboard/upload', upload.single('image'), (req, res) => {
+// CF: Added token verification
+app.post('/dashboard/upload', verifyToken, upload.single('image'), (req, res) => {
     const userId = req.body.user_id;
     const description = req.body.description;
     const imagePath = req.file.path; // This will store the path of the uploaded image
@@ -105,7 +129,8 @@ app.post('/dashboard/upload', upload.single('image'), (req, res) => {
     });
 });
 
-app.post('/dashboard/rate', (req, res) => {
+// CF: Added token verification
+app.post('/dashboard/rate', verifyToken, (req, res) => {
     const userId = req.body.user_id;
     const photoId = req.body.photo_id;
     const rating = req.body.rating;
