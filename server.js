@@ -7,6 +7,8 @@ const port = 3001;
 const db = new sqlite3.Database('database.db');
 const cors = require('cors');
 const multer = require('multer');
+const cookieParse = require('cookie-parser'); // CF: Parsing for cookies
+
 const storage = multer.diskStorage({
     destination: function(req, file, cb) {
         cb(null, './uploads'); // You need to create this directory to store uploaded images
@@ -88,7 +90,16 @@ app.post('/login', (req, res) => {
 
         // CF: Generate JWT token. Expires in 1h
         const token = jwt.sign({ username }, secretKey, { expiresIn: '1h' });
-        res.json({ success: true, token}); // CF: Send token to client
+
+        // CF: Set toke as HTTP-only cookie
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: true, // CF: for HTTPS environments
+            maxAge: 3600000, // CF: 1 hour, same as JWT token expiration
+        })
+
+        // CF: Send token to client
+        res.json({ success: true, token});
     });
 });
 
