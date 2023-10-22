@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import axios from '../../api/axios';
 import './Dashboard.css';
+import { useUser } from '../UserContext/UserContext'; // Adjust the path to your actual UserContext location
 
 function Dashboard() {
   const [images, setImages] = useState([]);
@@ -8,22 +9,23 @@ function Dashboard() {
   const [isUploadModalVisible, setUploadModalVisible] = useState(false);
   const [uploadedImage, setUploadedImage] = useState(null);
   const [description, setDescription] = useState('');
-  const [userId, setUserId] = useState('');
   const [userRating, setUserRating] = useState(0); // User's rating for the selected image
-
+  const { userId } = useUser();  // Using the custom hook
+  const [averageRating, setAverageRating] = useState(0);
   useEffect(() => {
-    fetchData();
-  }, []);
-
+    fetchData().then(data => {
+        setImages(data);
+    });
+}, []);
   const fetchData = async () => {
     try {
-      const response = await axios.get('/dashboard');
-      setImages(Array.isArray(response.data) ? response.data : []);
+        const response = await axios.get('/dashboard');
+        return Array.isArray(response.data) ? response.data : [];
     } catch (error) {
-      console.error("Error fetching data:", error);
-      setImages([]);
+        console.error("Error fetching data:", error);
+        return [];
     }
-  };
+};
 
   
   const getImageUrl = (path) => {
@@ -36,7 +38,6 @@ function Dashboard() {
 
   const handleSubmit = async () => {
     const formData = new FormData();
-    formData.append('user_id', userId);
     formData.append('image', uploadedImage);
     formData.append('description', description);
 
@@ -49,26 +50,80 @@ function Dashboard() {
     }
   };
 
-  const handleImageClick = (image) => {
-    setSelectedImage(image);
-  };
+  const handleImageClick = async (image) => {
+    try {
+        const response = await axios.get(`/dashboard/rating/${image.id}`);
+        
+        // Convert each rating from the response to a number and store in an array
+        const ratingsArray = (Array.isArray(response.data) ? response.data : [])
+        .map(item => Number(item.rating));
+        
+        // Calculate the total ratings using reduce function
+        const totalRatings = ratingsArray.reduce((sum, ratingValue) => sum + ratingValue, 0);
+        
+        // Calculate the average rating
+        const averageRating = totalRatings / ratingsArray.length;
+
+        // Store the average rating in the selected image object
+        setSelectedImage({
+            ...image,
+            averageRating: averageRating
+        });
+    } catch (error) {
+        console.error("Error fetching ratings:", error);
+    }
+};
+
 
   const toggleUploadModal = () => {
     setUploadModalVisible(!isUploadModalVisible);
   };
 
   const handleRating = async (rating) => {
-    console.log("Rated:", rating); // For now, it just logs the rating. You can update this function as needed.
-    try {
-      await axios.post('/dashboard/rate', {
-        imageId: selectedImage.id,
-        userId: userId,
-        rating: rating,
-      });
-      setUserRating(rating);
-      // You may also want to update the average rating for this image in the UI.
-    } catch (error) {
-      console.error("Error rating image:", error);
+    if (selectedImage) {
+      try {
+        await axios.post('/dashboard/rate', {
+          user_id: userId,
+          photo_id: selectedImage.id, // Pass the id of the selected image
+          rating: rating
+        });
+  
+        setUserRating(rating);
+        
+        const response = await axios.get(`/dashboard/rating/${selectedImage.id}`);
+    
+        console.log('Selected Image ID:', selectedImage.id);
+        console.log('Rating:', rating);
+        console.log('User ID:', userId);
+        
+        // Convert each rating from the response to a number and store in an array
+        const ratingsArray = (Array.isArray(response.data) ? response.data : [])
+        .map(item => Number(item.rating));
+        
+        console.log(ratingsArray);
+        
+        // Calculate the total ratings using reduce function
+        const totalRatings = ratingsArray.reduce((sum, ratingValue) => sum + ratingValue, 0);
+        
+        // Calculate the average rating
+        const averageRating = totalRatings / ratingsArray.length;
+
+        setSelectedImage(prevImage => ({
+          ...prevImage,
+          averageRating: averageRating
+      }));
+      fetchData().then(data => {
+        setImages(data);
+    });
+      setSelectedImage(null);
+        // Update the average rating in the UI or do something with it
+      console.log("Average Rating:", averageRating);
+  
+      } catch (error) {
+        console.error("Error rating image:", error);
+      }
+    } else {
+      console.error("No selected image to rate.");
     }
 };
 
@@ -81,6 +136,7 @@ const SelectedImageModal = () => {
                 <img src={getImageUrl(selectedImage.image_path)} alt={selectedImage.description} />
                 <p>{selectedImage.description}</p>
                 <div className="rate-section">
+                    <p className="average-rating">Average Rating: {selectedImage.averageRating.toFixed(1)} / 5</p>
                     <span className="rate-text">Rate:</span>
                     <span className="empty-star" onClick={() => handleRating(5)}>&#9734;</span>
                     <span className="empty-star" onClick={() => handleRating(4)}>&#9734;</span>

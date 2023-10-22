@@ -1,15 +1,12 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from '../../api/axios';
-import UserContext from '../UserContext/UserContext';
-
 const LOGIN_URL = "/login";
 
-function LoginForm({ onLogin }) {
+function LoginForm() {
   const [formData, setFormData] = useState({ username: '', password: '' });
   const [errors, setErrors] = useState({});
   const [loginSuccess, setLoginSuccess] = useState(false);
-  const { setUserId } = useContext(UserContext);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -36,19 +33,10 @@ function LoginForm({ onLogin }) {
       try {
         const response = await axios.post(LOGIN_URL, formData);
         if (response.data.success) {
-          const userIdResponse = await axios.get('/getid', {
-            params: {
-              username: formData.username, // Pass the username from your form data
-            },
-          });
-          const userId = userIdResponse.data.userId;
-          console.log('Current logged in user is ', userId)
+          localStorage.setItem('authToken', response.data.token);
           setLoginSuccess(true);
           setFormData({ username: '', password: '' }); // Clear form data
           setErrors({}); // Clear errors
-          // Pass the user ID to the onLogin callback
-           onLogin(userId);
-           setUserId(userId);
           setTimeout(() => {
             navigate('/dashboard');
           }, 2000);

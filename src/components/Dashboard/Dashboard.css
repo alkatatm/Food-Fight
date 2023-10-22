@@ -235,15 +235,23 @@ input[type="text"], input[type="password"], input[type="email"] {
 
 .rate-text {
   margin-right: 10px; /* Adjust this value if you want more or less space between "Rate:" and the stars */
-  font-size: 48px;
+  font-size: 24px;
   order: 1;
 }
 
+.average-rating {
+  text-align: right;
+  font-weight: bold;
+  margin-bottom: 20px;
+  margin-left: 50px;
+}
+
 .empty-star {
-  font-size: 72px;
+  font-size: 48px;
   cursor: pointer;
   transition: color 0.3s;
   float: right; /* float the stars to the right */
+  margin-bottom: 20px;
  
 }
 

@@ -1,14 +1,11 @@
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const bodyParser = require('body-parser');
-const jwt = require('jsonwebtoken'); // CF: JWT token authentication
 const app = express();
 const port = 3001;
 const db = new sqlite3.Database('database.db');
 const cors = require('cors');
 const multer = require('multer');
-const cookieParse = require('cookie-parser'); // CF: Parsing for cookies
-
 const storage = multer.diskStorage({
     destination: function(req, file, cb) {
         cb(null, './uploads'); // You need to create this directory to store uploaded images
@@ -18,26 +15,6 @@ const storage = multer.diskStorage({
     }
 });
 
-// CF: JWT token verification. Added as second argument to protected routes
-// CF: Add token verification to routes to be protected
-function verifyToken(req, res, next) {
-    const token = req.headers.authorization; // CF: assumes token is in header
-    if (!token) {
-        return res.status(401).json({ error: 'Unauthorized'});
-    }
-
-    jwt.verify(token, secretKey, (err, decoded) => {
-        if (err) {
-            return res.status(403).json({ error: 'Forbidden'});
-        }
-
-        // CF: When token is invalid user data stored in request object
-        req.user = decoded;
-        next();
-    });
-}
-
-const secretKey = 'secret-key'; // CF: change to something more secret
 const upload = multer({ storage: storage });
 
 app.use('/uploads', express.static('uploads')); 
@@ -88,23 +65,37 @@ app.post('/login', (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid credentials' });
         }
 
-        // CF: Generate JWT token. Expires in 1h
-        const token = jwt.sign({ username }, secretKey, { expiresIn: '1h' });
-
-        // CF: Set toke as HTTP-only cookie
-        res.cookie('token', token, {
-            httpOnly: true,
-            secure: true, // CF: for HTTPS environments
-            maxAge: 3600000, // CF: 1 hour, same as JWT token expiration
-        })
-
-        // CF: Send token to client
-        res.json({ success: true, token});
+        // Authentication successful (not recommended)
+        res.json({ success: true });
     });
 });
 
-// CF: Added token verification
-app.get('/dashboard', verifyToken, (req, res) => {
+
+app.get('/getid', (req, res) => {
+    const { username } = req.query; // Retrieve username from query string
+    console.log("Received GET request on /getid with username:", username);
+    
+    // Check if a username was provided
+    if (!username) {
+        return res.status(400).json({ error: 'Username is required in the query string' });
+    }
+
+    // Retrieve user from the database based on username
+    db.get('SELECT id FROM users WHERE username = ?', [username], (err, user) => {
+        if (err) {
+            return res.status(500).json({ error: 'Database error' });
+        }
+        if (!user) {
+            return res.status(400).json({ success: false, message: 'User not found' });
+        }
+
+        // Send the user ID as a JSON response
+        res.json({ success: true, userId: user.id });
+    });
+});
+
+
+app.get('/dashboard', (req, res) => {
     console.log("Received GET request on /dashboard");
     
     db.all('SELECT photos.*, COALESCE(AVG(ratings.rating), 0) AS average_rating FROM photos LEFT JOIN ratings ON photos.id = ratings.photo_id GROUP BY photos.id ORDER BY average_rating DESC;', (err, rows) => {
@@ -125,13 +116,11 @@ app.get('/dashboard', verifyToken, (req, res) => {
     });
 });
 
-// CF: Added token verification
-app.post('/dashboard/upload', verifyToken, upload.single('image'), (req, res) => {
-    const userId = req.body.user_id;
+app.post('/dashboard/upload', upload.single('image'), (req, res) => {
     const description = req.body.description;
     const imagePath = req.file.path; // This will store the path of the uploaded image
 
-    db.run('INSERT INTO photos (user_id, image_path, description) VALUES (?, ?, ?)', [userId, imagePath, description], (err) => {
+    db.run('INSERT INTO photos (image_path, description) VALUES (?, ?)', [imagePath, description], (err) => {
         if (err) {
             console.error("Error inserting into photos:", err.message);
             return res.status(500).json({ error: 'Photo upload failed', details: err.message });
@@ -140,38 +129,62 @@ app.post('/dashboard/upload', verifyToken, upload.single('image'), (req, res) =>
     });
 });
 
-// CF: Added token verification
-app.post('/dashboard/rate', verifyToken, (req, res) => {
-    const userId = req.body.user_id;
-    const photoId = req.body.photo_id;
+app.post('/dashboard/rate', (req, res) => {
+    const user_id = req.body.user_id; // Assuming you send the user's ID
+    const photo_id = req.body.photo_id; // Get the photoId from the request
     const rating = req.body.rating;
-
+    
+    console.log("Fetching ratings");
     // Check if the user has already rated this photo
-    db.get('SELECT * FROM ratings WHERE user_id = ? AND photo_id = ?', [userId, photoId], (err, existingRating) => {
+    db.get('SELECT * FROM ratings WHERE user_id = ? AND photo_id = ?', [user_id, photo_id], (err, existingRating) => {
+      if (err) {
+        console.error("Database error occurred:", err.message);
+        return res.status(500).json({ error: 'Database error', details: err.message });
+      }
+  
+      if (existingRating) {
+        // If the user has already rated this photo, update the existing rating
+        db.run('UPDATE ratings SET rating = ? WHERE user_id = ? AND photo_id = ?', [rating, user_id, photo_id], (err) => {
+          if (err) {
+            console.error("Error updating rating:", err.message);
+            return res.status(500).json({ error: 'Rating update failed', details: err.message });
+          }
+          res.json({ message: 'Rating updated successfully' });
+        });
+      } else {
+        // If the user has not rated this photo before, insert a new rating
+        db.run('INSERT INTO ratings (user_id, photo_id, rating) VALUES (?, ?, ?)', [user_id, photo_id, rating], (err) => {
+        console.log("500 error");
+          if (err) {
+            console.error("Error inserting rating:", err.message);
+            return res.status(500).json({ error: 'Rating failed', details: err.message });
+          }
+          res.json({ message: 'Rating posted successfully' });
+        });
+      }
+    });
+  });
+
+  app.get('/dashboard/rating/:photoId', (req, res) => {
+    const photoId = req.params.photoId;  // Extracting photoId from route parameter
+
+    if (!photoId) {
+        return res.status(400).json({ error: 'Photo ID is required' });
+    }
+
+    // Fetch the average rating for the specified photo
+    db.all('SELECT rating FROM ratings WHERE photo_id = ?', [photoId], (err, row) => {
         if (err) {
             console.error("Database error occurred:", err.message);
             return res.status(500).json({ error: 'Database error', details: err.message });
         }
 
-        if (existingRating) {
-            // If the user has already rated this photo, update the existing rating
-            db.run('UPDATE ratings SET rating = ? WHERE user_id = ? AND photo_id = ?', [rating, userId, photoId], (err) => {
-                if (err) {
-                    console.error("Error updating rating:", err.message);
-                    return res.status(500).json({ error: 'Rating update failed', details: err.message });
-                }
-                res.json({ message: 'Rating updated successfully' });
-            });
-        } else {
-            // If the user has not rated this photo before, insert a new rating
-            db.run('INSERT INTO ratings (user_id, photo_id, rating) VALUES (?, ?, ?)', [userId, photoId, rating], (err) => {
-                if (err) {
-                    console.error("Error inserting rating:", err.message);
-                    return res.status(500).json({ error: 'Rating failed', details: err.message });
-                }
-                res.json({ message: 'Rating posted successfully' });
-            });
+        if (!row) {
+            return res.status(404).json({ message: "Rating not found for the given photo" });
         }
+        
+        // If successful, send the average rating as JSON response
+        res.json(row); // If no ratings, default to 0
     });
 });
 

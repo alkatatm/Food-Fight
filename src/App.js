@@ -8,12 +8,18 @@ import Dashboard from './components/Dashboard/Dashboard';
 import { useLocation } from 'react-router-dom';
 import { useEffect } from 'react'; 
 import logo from './images/logo.png';
+import { UserProvider } from './components/UserContext/UserContext'; // Import the provider
+
 function App() {
   const [showRegistrationModal, setShowRegistrationModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  
+  const [userId, setUserId] = useState(null);
+
+  const handleLogin = (userId) => {
+    setUserId(userId);
+  };
   useEffect(() => {
     if (location.pathname === '/login') {
       setShowLoginModal(true);
@@ -48,10 +54,19 @@ function App() {
   };
 
   if (location.pathname === '/dashboard') {
-    return <Dashboard />;
+    return <UserProvider>
+    <Dashboard />
+  </UserProvider>
   }
 
+  <Routes>
+  <Route path="/" element={<Outlet />} />
+  <Route path="/register" element={<Outlet />} />
+  <Route path="/dashboard" element={<Dashboard userId={userId}/>}/>
+</Routes>
+
   return (
+  <UserProvider>
       <div className="App">
         <img src={logo} alt="Company Logo" className="company-logo" />
         <h1>Food Wars</h1>
@@ -60,15 +75,6 @@ function App() {
           <button onClick={openRegistrationModal}>Register</button>
           <button onClick={openLoginModal}>Login</button>
         </div>
-
-      <Routes>
-        <Route path="/" element={<Outlet />} />
-        <Route path="/register" element={<Outlet />} />
-        <Route path="/login" element={<Outlet />} />
-        <Route path="/dashboard" element={<Dashboard />
-  }
-/>
-      </Routes>
 
         {showRegistrationModal && (
           <div className="modal">
@@ -87,11 +93,14 @@ function App() {
               <span className="close" onClick={closeLoginModal}>
                 &times;
               </span>
-              <LoginForm />
+              <Routes>
+              <Route path="/login" element={<LoginForm onLogin={handleLogin} />} />
+              </Routes>
             </div>
           </div>
         )}
     </div>
+    </UserProvider>
   );
 }
 
