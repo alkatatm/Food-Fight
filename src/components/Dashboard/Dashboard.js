@@ -3,7 +3,7 @@ import api from '../../api/axios';
 import './Dashboard.css';
 import { useUser } from '../UserContext/UserContext'; // Adjust the path to your actual UserContext location
 import { useNavigate } from 'react-router-dom';
-
+import $ from 'jquery';
 function Dashboard() {
   const navigate = useNavigate();
   const [images, setImages] = useState([]);
@@ -20,36 +20,44 @@ function Dashboard() {
     });
 }, []);
 
-  const fetchData = async () => {
-    try {
-        const response = await api.get('/dashboard');
-        return Array.isArray(response.data) ? response.data : [];
-    } catch (error) {
-        if (error.response && error.response.status === 401) {
-        setHasForbiddenError(true);
-        return [];
-    }
-  }
+const fetchData = () => {
+  const deferred = $.Deferred();
+
+  api.get('/dashboard')
+      .then(response => {
+          if (Array.isArray(response.data)) {
+              deferred.resolve(response.data);
+          } else {
+              deferred.resolve([]);
+          }
+      })
+      .catch(error => {
+          if (error.response && error.response.status === 401) {
+              setHasForbiddenError(true);
+          }
+          deferred.reject(error);
+      });
+
+  return deferred.promise();
 };
 
-const handleLogout = async () => {
-  try {
-    // Call to your API to logout. Adjust the endpoint if different.
-    const token = localStorage.getItem('jwtToken'); 
+const handleLogout = () => {
+  const deferred = $.Deferred();
+  
+  const token = localStorage.getItem('jwtToken');
 
-    // Call to your API to logout. Pass the token to be invalidated.
-    await api.post('/logout', { token });
-    
-    // Remove the JWT token from local storage (or wherever you've stored it)
-    localStorage.removeItem('jwtToken'); 
-    
-    // Redirect user to the home screen using navigate
-    navigate('/');
+  api.post('/logout', { token })
+      .then(() => {
+          localStorage.removeItem('jwtToken'); 
+          navigate('/');
+          deferred.resolve();
+      })
+      .catch(error => {
+          console.error("Error logging out:", error);
+          deferred.reject(error);
+      });
 
-    // Optionally, you can also clear any user-related states or contexts here.
-  } catch (error) {
-    console.error("Error logging out:", error);
-  }
+  return deferred.promise();
 };
   
   const getImageUrl = (path) => {
@@ -60,42 +68,51 @@ const handleLogout = async () => {
     setUploadedImage(event.target.files[0]);
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
+    const deferred = $.Deferred();
+
     const formData = new FormData();
     formData.append('image', uploadedImage);
     formData.append('description', description);
 
-    try {
-      await api.post('/dashboard/upload', formData);
-      toggleUploadModal();
-      fetchData();
-    } catch (error) {
-      console.error("Error uploading image:", error);
-    }
-  };
-
-  const handleImageClick = async (image) => {
-    try {
-        const response = await api.get(`/dashboard/rating/${image.id}`);
-        
-        // Convert each rating from the response to a number and store in an array
-        const ratingsArray = (Array.isArray(response.data) ? response.data : [])
-        .map(item => Number(item.rating));
-        
-        // Calculate the total ratings using reduce function
-        const totalRatings = ratingsArray.reduce((sum, ratingValue) => sum + ratingValue, 0);
-        
-        // Calculate the average rating
-        const averageRating = totalRatings / ratingsArray.length;
-
-        // Store the average rating in the selected image object
-        setSelectedImage({
-            ...image,
-            averageRating: isNaN(averageRating) ? 0 : averageRating // handle NaN
+    api.post('/dashboard/upload', formData)
+        .then(() => {
+            toggleUploadModal();
+            fetchData();
+            deferred.resolve();
+        })
+        .catch(error => {
+            console.error("Error uploading image:", error);
+            deferred.reject(error);
         });
-    } catch (error) {
-        console.error("Error fetching ratings:", error);
-    }
+
+    return deferred.promise();
+};
+
+  const handleImageClick = (image) => {
+    const deferred = $.Deferred();
+
+    api.get(`/dashboard/rating/${image.id}`)
+        .then(response => {
+            const ratingsArray = (Array.isArray(response.data) ? response.data : [])
+                .map(item => Number(item.rating));
+            
+            const totalRatings = ratingsArray.reduce((sum, ratingValue) => sum + ratingValue, 0);
+            const averageRating = totalRatings / ratingsArray.length;
+
+            setSelectedImage({
+                ...image,
+                averageRating: isNaN(averageRating) ? 0 : averageRating
+            });
+
+            deferred.resolve(averageRating);
+        })
+        .catch(error => {
+            console.error("Error fetching ratings:", error);
+            deferred.reject(error);
+        });
+
+    return deferred.promise();
 };
 
 
@@ -103,53 +120,56 @@ const handleLogout = async () => {
     setUploadModalVisible(!isUploadModalVisible);
   };
 
-  const handleRating = async (rating) => {
-    if (selectedImage) {
-      try {
-        await api.post('/dashboard/rate', {
-          user_id: userId,
-          photo_id: selectedImage.id, // Pass the id of the selected image
-          rating: rating
-        });
-  
-        setUserRating(rating);
-        
-        const response = await api.get(`/dashboard/rating/${selectedImage.id}`);
-    
-        console.log('Selected Image ID:', selectedImage.id);
-        console.log('Rating:', rating);
-        console.log('User ID:', userId);
-        
-        // Convert each rating from the response to a number and store in an array
-        const ratingsArray = (Array.isArray(response.data) ? response.data : [])
-        .map(item => Number(item.rating));
-        
-        console.log(ratingsArray);
-        
-        // Calculate the total ratings using reduce function
-        const totalRatings = ratingsArray.reduce((sum, ratingValue) => sum + ratingValue, 0);
-        
-        // Calculate the average rating
-        const averageRating = totalRatings / ratingsArray.length;
+  const handleRating = (rating) => {
+    const deferred = $.Deferred();
 
-        setSelectedImage(prevImage => ({
-          ...prevImage,
-          averageRating: averageRating
-      }));
-      fetchData().then(data => {
-        setImages(data);
-    });
-      setSelectedImage(null);
-        // Update the average rating in the UI or do something with it
-      console.log("Average Rating:", averageRating);
-  
-      } catch (error) {
-        console.error("Error rating image:", error);
-      }
+    if (selectedImage) {
+        api.post('/dashboard/rate', {
+            user_id: userId,
+            photo_id: selectedImage.id, // Pass the id of the selected image
+            rating: rating
+        })
+        .then(async () => {
+            setUserRating(rating);
+            
+            const response = await api.get(`/dashboard/rating/${selectedImage.id}`);
+    
+            // Convert each rating from the response to a number and store in an array
+            const ratingsArray = (Array.isArray(response.data) ? response.data : [])
+                .map(item => Number(item.rating));
+            
+            // Calculate the total ratings using reduce function
+            const totalRatings = ratingsArray.reduce((sum, ratingValue) => sum + ratingValue, 0);
+            
+            // Calculate the average rating
+            const averageRating = totalRatings / ratingsArray.length;
+
+            setSelectedImage(prevImage => ({
+                ...prevImage,
+                averageRating: averageRating
+            }));
+
+            // Fetch data for the images list
+            fetchData().then(data => {
+                setImages(data);
+            });
+
+            setSelectedImage(null);
+            
+            deferred.resolve(averageRating);
+        })
+        .catch(error => {
+            console.error("Error rating image:", error);
+            deferred.reject(error);
+        });
     } else {
-      console.error("No selected image to rate.");
+        console.error("No selected image to rate.");
+        deferred.reject(new Error("No selected image to rate."));
     }
+
+    return deferred.promise();
 };
+
 
 const SelectedImageModal = () => {
     return (
@@ -179,7 +199,7 @@ const SelectedImageModal = () => {
             <h1>Access Forbidden: You do not have permission to view this content.</h1>
         ) : (
             <>
-      <div class="header-container">
+      <div className="header-container">
       <h1>Food Gallery</h1>
       <button className="logout-button" onClick={handleLogout}>Logout</button>
       </div>

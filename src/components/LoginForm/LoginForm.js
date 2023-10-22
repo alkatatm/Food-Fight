@@ -1,4 +1,5 @@
 import React, { useState, useContext } from 'react';
+import $ from 'jquery';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/axios';
 import UserContext from '../UserContext/UserContext';
@@ -29,39 +30,42 @@ function LoginForm({ onLogin }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
   
+    const deferred = $.Deferred();
+
     if (validateForm()) {
-      try {
-        const response = await api.post(LOGIN_URL, formData);
-        if (response.data.success) {
-          //Store JWT token in local storage
-          localStorage.setItem('jwtToken', response.data.token);
-          const userIdResponse = await api.get('/getid', {
-            params: {
-              username: formData.username, // Pass the username from your form data
-            },
-          });
+      api.post(LOGIN_URL, formData)
+        .then(response => {
+          if (response.data.success) {
+            localStorage.setItem('jwtToken', response.data.token);
+            return api.get('/getid', { params: { username: formData.username } });
+          } else {
+            deferred.reject(new Error('Invalid credentials'));
+          }
+        })
+        .then(userIdResponse => {
           const userId = userIdResponse.data.userId;
-          console.log('Current logged in user is ', userId)
+          console.log('Current logged in user is ', userId);
           setLoginSuccess(true);
           setFormData({ username: '', password: '' }); // Clear form data
           setErrors({}); // Clear errors
-          // Pass the user ID to the onLogin callback
           onLogin(userId);
           setUserId(userId);
           setTimeout(() => {
             navigate('/dashboard');
           }, 2000);
-        } else {
-          setErrors({ general: 'Invalid credentials' });
-        }
-      } catch (error) {
-        console.error('Login Error:', error);
-        setErrors({ general: 'An error occurred. Please try again later.' });
-      }
+          deferred.resolve();
+        })
+        .catch(error => {
+          console.error('Login Error:', error);
+          setErrors({ general: 'An error occurred. Please try again later.' });
+          deferred.reject(error);
+        });
     }
+
+    return deferred.promise();
   };
   
   return (
