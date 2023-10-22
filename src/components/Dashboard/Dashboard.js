@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import axios from '../../api/axios';
+import api from '../../api/axios';
 import './Dashboard.css';
 import { useUser } from '../UserContext/UserContext'; // Adjust the path to your actual UserContext location
 
@@ -12,14 +12,16 @@ function Dashboard() {
   const [userRating, setUserRating] = useState(0); // User's rating for the selected image
   const { userId } = useUser();  // Using the custom hook
   const [averageRating, setAverageRating] = useState(0);
+
   useEffect(() => {
     fetchData().then(data => {
         setImages(data);
     });
 }, []);
+
   const fetchData = async () => {
     try {
-        const response = await axios.get('/dashboard');
+        const response = await api.get('/dashboard');
         return Array.isArray(response.data) ? response.data : [];
     } catch (error) {
         console.error("Error fetching data:", error);
@@ -42,7 +44,7 @@ function Dashboard() {
     formData.append('description', description);
 
     try {
-      await axios.post('/dashboard/upload', formData);
+      await api.post('/dashboard/upload', formData);
       toggleUploadModal();
       fetchData();
     } catch (error) {
@@ -52,7 +54,7 @@ function Dashboard() {
 
   const handleImageClick = async (image) => {
     try {
-        const response = await axios.get(`/dashboard/rating/${image.id}`);
+        const response = await api.get(`/dashboard/rating/${image.id}`);
         
         // Convert each rating from the response to a number and store in an array
         const ratingsArray = (Array.isArray(response.data) ? response.data : [])
@@ -67,7 +69,7 @@ function Dashboard() {
         // Store the average rating in the selected image object
         setSelectedImage({
             ...image,
-            averageRating: averageRating
+            averageRating: isNaN(averageRating) ? 0 : averageRating // handle NaN
         });
     } catch (error) {
         console.error("Error fetching ratings:", error);
@@ -82,7 +84,7 @@ function Dashboard() {
   const handleRating = async (rating) => {
     if (selectedImage) {
       try {
-        await axios.post('/dashboard/rate', {
+        await api.post('/dashboard/rate', {
           user_id: userId,
           photo_id: selectedImage.id, // Pass the id of the selected image
           rating: rating
@@ -90,7 +92,7 @@ function Dashboard() {
   
         setUserRating(rating);
         
-        const response = await axios.get(`/dashboard/rating/${selectedImage.id}`);
+        const response = await api.get(`/dashboard/rating/${selectedImage.id}`);
     
         console.log('Selected Image ID:', selectedImage.id);
         console.log('Rating:', rating);

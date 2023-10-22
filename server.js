@@ -8,11 +8,11 @@ const db = new sqlite3.Database('database.db');
 const cors = require('cors');
 const multer = require('multer');
 const secretKey = 'secret-key'; // CF: Must be before verifyToken function
-const cookieParser = require('cookie-parser'); // CF: Tokens stored as cookies
-app.use(cookieParser()); // CF: Parsing for tokens as cookies
+//const cookieParser = require('cookie-parser'); // CF: Tokens stored as cookies
+//app.use(cookieParser()); // CF: Parsing for tokens as cookies
 const storage = multer.diskStorage({
     destination: function(req, file, cb) {
-        cb(null, './uploads'); // You need to create this directory to store uploaded images
+        cb(null, './uploads'); 
     },
     filename: function(req, file, cb) {
         cb(null, Date.now() + '-' + file.originalname);
@@ -23,12 +23,15 @@ const storage = multer.diskStorage({
 function verifyToken(req, res, next) {
     const token = req.headers.authorization; // CF: assumes token is in header
     if(!token) {
+        console.log('No Token found');
         return res.status(401).json({ error: 'Unauthorized'});
     }
 
     // CF: Token mismatch
     jwt.verify(token, secretKey, (err, decoded) => {
         if(err) {
+            console.log('Verification failed');
+            console.log('Backend token:', token);
             return res.status(403).json({ error: 'Forbidden'});
         }
 
@@ -43,6 +46,7 @@ app.use('/uploads', express.static('uploads'));
 app.use(cors({
     origin: 'http://localhost:3000',  // Allow this origin
     credentials: true,                // Allow cookies
+    httpOnly: true,
 }));
 app.use(bodyParser.json());
 
@@ -73,6 +77,7 @@ app.post('/register', (req, res) => {
 app.post('/login', (req, res) => {
     const { username, password } = req.body;
     console.log("Received POST request on /login");
+
     // Retrieve user from the database
     db.get('SELECT * FROM users WHERE username = ?', [username], (err, user) => {
         if (err) {
@@ -87,18 +92,34 @@ app.post('/login', (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid credentials' });
         }
 
-        // CF: Generate JWT token that expires in 1h upon successful login.
+        // Generate JWT token that expires in 1h upon successful login.
         const token = jwt.sign({username}, secretKey,{expiresIn:'1h'});
-
-        // CF: Set token as HTTP-only cookie for development
-        res.cookie('token', token, {
-            httpOnly: true,
-            secure: false, // CF: for https environments set to true
-            maxAge: 3600000, // CF: 1 hour expiration of token
-        })
-
-        // Authentication successful (not recommended) CF: Token being sent to client on successful login
+        // Directly send the token in the response body
         res.json({ success: true, token });
+    });
+});
+
+
+app.get('/getid', (req, res) => {
+    const { username } = req.query; // Retrieve username from query string
+    console.log("Received GET request on /getid with username:", username);
+    
+    // Check if a username was provided
+    if (!username) {
+        return res.status(400).json({ error: 'Username is required in the query string' });
+    }
+
+    // Retrieve user from the database based on username
+    db.get('SELECT id FROM users WHERE username = ?', [username], (err, user) => {
+        if (err) {
+            return res.status(500).json({ error: 'Database error' });
+        }
+        if (!user) {
+            return res.status(400).json({ success: false, message: 'User not found' });
+        }
+
+        // Send the user ID as a JSON response
+        res.json({ success: true, userId: user.id });
     });
 });
 

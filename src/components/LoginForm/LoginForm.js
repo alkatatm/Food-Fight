@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from '../../api/axios';
+import api from '../../api/axios';
 import UserContext from '../UserContext/UserContext';
 
 const LOGIN_URL = "/login";
@@ -34,9 +34,11 @@ function LoginForm({ onLogin }) {
   
     if (validateForm()) {
       try {
-        const response = await axios.post(LOGIN_URL, formData);
+        const response = await api.post(LOGIN_URL, formData);
         if (response.data.success) {
-          const userIdResponse = await axios.get('/getid', {
+          //Store JWT token in local storage
+          localStorage.setItem('jwtToken', response.data.token);
+          const userIdResponse = await api.get('/getid', {
             params: {
               username: formData.username, // Pass the username from your form data
             },
@@ -47,8 +49,8 @@ function LoginForm({ onLogin }) {
           setFormData({ username: '', password: '' }); // Clear form data
           setErrors({}); // Clear errors
           // Pass the user ID to the onLogin callback
-           onLogin(userId);
-           setUserId(userId);
+          onLogin(userId);
+          setUserId(userId);
           setTimeout(() => {
             navigate('/dashboard');
           }, 2000);
