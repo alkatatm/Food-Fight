@@ -7,7 +7,9 @@ const port = 3001;
 const db = new sqlite3.Database('database.db');
 const cors = require('cors');
 const multer = require('multer');
-const cookieParse = require('cookie-parser'); // CF: Parsing for cookies
+const secretKey = 'secret-key'; // CF: change to something more secret MUST BE BEFORE VERIFYTOKEN FUNCTION, or encoding/decoding errors occur
+const cookieParser = require('cookie-parser'); // CF: Parsing for cookies
+app.use(cookieParser()); // CF: Required for cookie parsing
 
 const storage = multer.diskStorage({
     destination: function(req, file, cb) {
@@ -37,7 +39,6 @@ function verifyToken(req, res, next) {
     });
 }
 
-const secretKey = 'secret-key'; // CF: change to something more secret
 const upload = multer({ storage: storage });
 
 app.use('/uploads', express.static('uploads')); 
@@ -46,8 +47,6 @@ app.use(cors({
     credentials: true,                // Allow cookies
 }));
 app.use(bodyParser.json());
-
-
 
 // Registration endpoint
 app.post('/register', (req, res) => {
@@ -91,10 +90,10 @@ app.post('/login', (req, res) => {
         // CF: Generate JWT token. Expires in 1h
         const token = jwt.sign({ username }, secretKey, { expiresIn: '1h' });
 
-        // CF: Set toke as HTTP-only cookie
+        // CF: Set token as HTTP-only cookie
         res.cookie('token', token, {
             httpOnly: true,
-            secure: true, // CF: for HTTPS environments
+            secure: false, // CF: for HTTPS environments set to true
             maxAge: 3600000, // CF: 1 hour, same as JWT token expiration
         })
 
