@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect} from 'react';
 import api from '../../api/axios';
 import './Dashboard.css';
 import { useUser } from '../UserContext/UserContext'; // Adjust the path to your actual UserContext location
+import { useNavigate } from 'react-router-dom';
 
 function Dashboard() {
+  const navigate = useNavigate();
   const [images, setImages] = useState([]);
   const [selectedImage, setSelectedImage] = useState(null);
   const [isUploadModalVisible, setUploadModalVisible] = useState(false);
@@ -11,8 +13,7 @@ function Dashboard() {
   const [description, setDescription] = useState('');
   const [userRating, setUserRating] = useState(0); // User's rating for the selected image
   const { userId } = useUser();  // Using the custom hook
-  const [averageRating, setAverageRating] = useState(0);
-
+  const [hasForbiddenError, setHasForbiddenError] = useState(false);
   useEffect(() => {
     fetchData().then(data => {
         setImages(data);
@@ -24,11 +25,32 @@ function Dashboard() {
         const response = await api.get('/dashboard');
         return Array.isArray(response.data) ? response.data : [];
     } catch (error) {
-        console.error("Error fetching data:", error);
+        if (error.response && error.response.status === 401) {
+        setHasForbiddenError(true);
         return [];
     }
+  }
 };
 
+const handleLogout = async () => {
+  try {
+    // Call to your API to logout. Adjust the endpoint if different.
+    const token = localStorage.getItem('jwtToken'); 
+
+    // Call to your API to logout. Pass the token to be invalidated.
+    await api.post('/logout', { token });
+    
+    // Remove the JWT token from local storage (or wherever you've stored it)
+    localStorage.removeItem('jwtToken'); 
+    
+    // Redirect user to the home screen using navigate
+    navigate('/');
+
+    // Optionally, you can also clear any user-related states or contexts here.
+  } catch (error) {
+    console.error("Error logging out:", error);
+  }
+};
   
   const getImageUrl = (path) => {
     return `http://localhost:3001/${path.replace('\\', '/')}`;
@@ -153,8 +175,14 @@ const SelectedImageModal = () => {
 
   return (
     <div className="Dashboard">
+      {hasForbiddenError ? (
+            <h1>Access Forbidden: You do not have permission to view this content.</h1>
+        ) : (
+            <>
+      <div class="header-container">
       <h1>Food Gallery</h1>
-      
+      <button className="logout-button" onClick={handleLogout}>Logout</button>
+      </div>
       <div className="image-grid">
         {images.map((image) => (
           <div
@@ -186,6 +214,8 @@ const SelectedImageModal = () => {
       )}
   
       {selectedImage && <SelectedImageModal />}
+      </>
+    )}
     </div>
   );
 }

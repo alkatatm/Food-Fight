@@ -69,7 +69,16 @@ button:hover {
 
 }
 
+.header-container {
+  display: flex;
+  justify-content: center; 
+  align-items: center; 
+}
 
+.logout-button {
+  margin-top: 150px;
+  margin-left: 10px;
+}
 /* Modals */
 .dashboard-modal {
   z-index: 9999;

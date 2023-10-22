@@ -19,6 +19,7 @@ const storage = multer.diskStorage({
     }
 });
 
+
 //CF: JWT token verification. verifyToken added as second argument in routes to be protected
 function verifyToken(req, res, next) {
     const token = req.headers.authorization; // CF: assumes token is in header
@@ -27,6 +28,10 @@ function verifyToken(req, res, next) {
         return res.status(401).json({ error: 'Unauthorized'});
     }
 
+    if(invalidatedTokens.includes(token)) {
+        return res.status(401).json({ error: 'Token has been invalidated' });
+    }
+    
     // CF: Token mismatch
     jwt.verify(token, secretKey, (err, decoded) => {
         if(err) {
@@ -99,6 +104,22 @@ app.post('/login', (req, res) => {
     });
 });
 
+let invalidatedTokens = [];
+app.post('/logout', (req, res) => {
+    console.log("Received POST request on /logout");
+    // Receive the token to be invalidated.
+    const token = req.body.token;
+
+    if(token) {
+        // Add the token to our list of invalidated tokens.
+        invalidatedTokens.push(token);
+
+        // Responding to the client to proceed with logout on their end.
+        res.json({ success: true, message: 'Logout successful' });
+    } else {
+        res.status(400).json({ success: false, message: 'Token not provided' });
+    }
+});
 
 app.get('/getid', (req, res) => {
     const { username } = req.query; // Retrieve username from query string
@@ -122,6 +143,8 @@ app.get('/getid', (req, res) => {
         res.json({ success: true, userId: user.id });
     });
 });
+
+
 
 // CF: Token verification added, see: 'verifyToken' argument
 app.get('/dashboard', verifyToken, (req, res) => {
