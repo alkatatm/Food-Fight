@@ -22,7 +22,8 @@ function Dashboard() {
 
 const fetchData = () => {
   const deferred = $.Deferred();
-
+  
+  console.log('Current logged in user is ', userId);
   api.get('/dashboard')
       .then(response => {
           if (Array.isArray(response.data)) {
@@ -75,6 +76,7 @@ const handleLogout = () => {
     formData.append('image', uploadedImage);
     formData.append('description', description);
 
+    console.log(userId);
     api.post('/dashboard/upload', formData)
         .then(() => {
             toggleUploadModal();

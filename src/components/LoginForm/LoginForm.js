@@ -47,7 +47,6 @@ function LoginForm({ onLogin }) {
         })
         .then(userIdResponse => {
           const userId = userIdResponse.data.userId;
-          console.log('Current logged in user is ', userId);
           setLoginSuccess(true);
           setFormData({ username: '', password: '' }); // Clear form data
           setErrors({}); // Clear errors

@@ -69,7 +69,7 @@ function App() {
   <UserProvider>
       <div className="App">
         <img src={logo} alt="Company Logo" className="company-logo" />
-        <h1>Food Wars</h1>
+        <h1>Food Fight</h1>
 
         <div className="button-container">
           <button onClick={openRegistrationModal}>Register</button>
