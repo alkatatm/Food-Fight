@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const instance = axios.create({
-  baseURL: "https://food-fight.onrender.com/",
+  baseURL: "https://food-fight-api.onrender.com",
 });
 
 // Add a request interceptor

@@ -49,11 +49,12 @@ const upload = multer({ storage: storage });
 
 app.use('/uploads', express.static('uploads')); 
 app.use(cors({
-    origin: 'https://food-fight-api.onrender.com',  // Allow this origin
+    origin: 'https://food-fight.onrender.com',  // Allow this origin
     credentials: true,                // Allow cookies
     httpOnly: true,
 }));
 app.use(bodyParser.json());
+
 
 
 // Registration endpoint
