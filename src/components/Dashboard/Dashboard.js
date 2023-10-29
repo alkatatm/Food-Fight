@@ -62,7 +62,7 @@ const handleLogout = () => {
 };
   
   const getImageUrl = (path) => {
-    return `http://localhost:3001/${path.replace('\\', '/')}`;
+    return `https://food-fight.onrender.com/${path.replace('\\', '/')}`;
   };
 
   const handleImageChange = (event) => {
