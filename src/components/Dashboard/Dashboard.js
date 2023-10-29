@@ -80,7 +80,11 @@ const handleLogout = () => {
     api.post('/dashboard/upload', formData)
         .then(() => {
             toggleUploadModal();
-            fetchData();
+            fetchData().then(newImages => {
+              setImages(newImages); // Refreshing the images displayed on the page
+            });
+            setDescription(''); // Clearing the description input field
+            setUploadedImage(null); // Resetting the uploaded image state
             deferred.resolve();
         })
         .catch(error => {

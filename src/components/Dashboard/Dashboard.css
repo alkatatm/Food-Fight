@@ -188,19 +188,17 @@ input[type="text"], input[type="password"], input[type="email"] {
 .image-grid {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
+  justify-content: left; /* Center the thumbnails */
   gap: 16px;
 }
 
 .image-thumbnail {
-  flex: 0 0 calc(20% - 16px); /* Adjusted for 5 images per row */
-  width: 256px; /* Setting the width */
-  height: 256px; /* Setting the height */
+  width: 256px; /* Setting the fixed width */
+  height: 256px; /* Setting the fixed height */
   position: relative;
   overflow: hidden; /* This will ensure any part of the image that exceeds the thumbnail size will be hidden. */
   background-color: #000; /* Black background */
 }
-
 .image-thumbnail img {
   width: 100%; /* This ensures the image covers the width of the thumbnail */
   height: 100%; /* This ensures the image covers the height of the thumbnail */
