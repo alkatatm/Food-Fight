@@ -62,7 +62,7 @@ const handleLogout = () => {
 };
   
   const getImageUrl = (path) => {
-    return `https://food-fight.onrender.com/${path.replace('\\', '/')}`;
+    return `https://food-fight-api.onrender.com/${path.replace('\\', '/')}`;
   };
 
   const handleImageChange = (event) => {
